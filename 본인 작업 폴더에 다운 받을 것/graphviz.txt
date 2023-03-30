@@ -1,0 +1,9 @@
+# 추가 데이터로 시각화(특징 값, 지니 계수, 샘플, 값, 클래스)
+dot_data = tree.export_graphviz(clf, out_file=None, 
+                                                feature_names=['longitude', 'latitude'],  
+                                                class_names=['Gangbuk', 'Gangdong', 'Gangnam', 'Gangseo'],  
+                                                filled=True, rounded=True,  
+                                                special_characters=True)  
+graph = graphviz.Source(dot_data)  
+graph.render("seoul2")  # 구글 가상머신에 seoul2라는 텍스트 파일과 pdf 파일 생성
+graph  # 화면에 Display

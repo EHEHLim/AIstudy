@@ -1,0 +1,112 @@
+# 입력값(학습 데이터와 테스트 데이터의 값)들을 모두 0부터 1까지의 값이 되도록 변경
+# 이렇게 하는 것을 정규화(normalization)라고 함.
+X_train = X_train.astype('float32')  # float 형으로 형변환
+X_test = X_test.astype('float32')   # float 형으로 형변환
+X_train /= 255 
+X_test /= 255
+
+# 정규화 확인 (첫 번째 학습 데이터)
+print(X_train[0])
+-----------------------------------------------------------
+# 데이터 개수 출력
+print("train target (count) : " + str(y_train.shape) )
+print("test target  (count) : " + str(y_test.shape) )
+# 첫 번째 데이터 숫자 확인
+print("sample from train : " + str(y_train[0]) )
+print("sample from test : " + str(y_test[0]) )
+-----------------------------------------------------------
+# 이미지를 불러오기 위해 구글 드라이브 연동하기
+from google.colab import drive
+drive.mount('/gdrive', force_remount=True)
+
+# 구글 드라이브의 로지스틱 회귀 모델 이미지 불러오기("내 드라이브" 폴더 => /gdrive/My Drive/)
+from IPython.display import Image
+Image("/gdrive/My Drive/Colab Notebooks/4.9.4_Softmax.png", width=650, height=400)
+-----------------------------------------------------------
+# 행열 구분된 것(2차원, 28x28) -> 1차원(784)으로 만들기
+input_dim = 784  # 28x28=784
+X_train = X_train.reshape(60000, input_dim)  # (60000, 28, 28)를 (60000, 784)로 변경 
+X_test = X_test.reshape(10000, input_dim)    # (10000, 28, 28)를 (10000, 784)로 변경
+-----------------------------------------------------------
+# 1차원 데이터 확인
+print(X_train.shape)  # 학습 데이터의 입력 데이터
+print(y_train.shape)  # 학습 데이터의 출력 데이터(정답)
+print(X_test.shape)   # 테스트 데이터의 입력 데이터
+print(y_test.shape)   # 테스트 데이터의 출력 데이터(정답)
+print(X_train[0])  # 학습 데이터 중 첫 번째 입력 데이터. (28, 28)이 (784)로 변경된 것 확인 가능.
+-----------------------------------------------------------
+# 학습 시, y(레이블)와 cross entropy를 측정해야 하므로, y를 one hot encoding으로 변환
+num_classes = 10
+y_train = to_categorical(y_train, num_classes)
+y_test = to_categorical(y_test, num_classes)
+
+# one hot encoding 변환 확인
+print("첫 번째 학습 데이터 (5) :", y_train[0])
+print()
+print("첫 번째 테스트 데이터 (7) :", y_test[0]) 
+-----------------------------------------------------------
+model = Sequential() 
+# 입력(input_dim) 784개를 받아 출력(units) 10개를 반환하는 선형회귀 레이어를 생성하고,
+# 선형회귀의 출력 값을 softmax에 연결
+model.add(Dense(input_dim=input_dim, units = 10, activation='softmax'))
+
+# 크로스 엔트로피를 손실 함수로 설정해 경사하강법으로 학습 설정
+# 여러 클래스 중 하나에 속해야 하는 분류 -> 범주형 크로스 엔트로피(categorical cross-entropy)
+# 하나의 출력 유닛을 갖는 이진 분류 문제 -> 이진 크로스 엔트로피(binary cross-entropy) 
+# sgd -> SGD(Stochastic Gradient Descent, 경사하강법) 사용
+# metrics는 평가측정 방법. 소프트맥스는 accuracy(정확도)를 사용
+model.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy']) 
+-----------------------------------------------------------
+trainhistory=model.fit(X_train, y_train, batch_size=2048, epochs=100, verbose=1)    # verbose=1 : 실행결과 보여주기
+# 학습 데이터 = 60,000개, 배치 사이즈 = 2048. 60,000/2048 = 29.296875... 대략 30회(step, iteration) -> 1 epoch
+# epoch이 100이므로 30 step을 100번 실행해야 함.
+-----------------------------------------------------------
+# 구글코랩에서 matplotlib의 그림에 한글 사용하기 위해서는 본 셀과 바로 아래 셀을 모두 실행해야 함.
+
+import matplotlib as mpl
+#import matplotlib.pyplot as plt   # 위에서 이미 선언했음
+%config InlineBackend.figure_format = 'retina'
+
+!apt -qq -y install fonts-nanum
+-----------------------------------------------------------
+import matplotlib.font_manager as fm
+
+fontpath = '/usr/share/fonts/truetype/nanum/NanumBarunGothic.ttf'
+font = fm.FontProperties(fname=fontpath, size=10)
+plt.rc('font', family='NanumBarunGothic') 
+mpl.font_manager._rebuild()
+
+# 위와 같이 작성 후.....
+#★★상단 [런타임] > [런타임 다시 시작] > [런타임] > [모두 실행] 순으로 
+# 프로그램 전체 다시 실행해야 아래 그래프에서 한글이 정상 표시됨. ★★ 
+# 차후 한글 사용 프로그램의 경우 바로 위 셀과 이 셀을 프로그램의 상단에 배치할 것.
+-----------------------------------------------------------
+# 화면에 그릴 데이터 설정
+acc = trainhistory.history['accuracy']
+loss = trainhistory.history['loss']
+epochs = range(1, len(acc)+1)
+
+# 이중 축 설정
+fig, ax1 = plt.subplots()   
+ax2 = ax1.twinx()
+
+# 축 제목 설정
+plt.title('정확도와 손실값')
+ax1.set_xlabel('에폭(Epochs)')
+ax1.set_ylabel('정확도', color='r')
+ax2.set_ylabel('손실값', color='b')
+
+# 데이터 그리기
+ax1.plot(epochs, acc, color='r')
+ax2.plot(epochs, loss, color='b')
+plt.show()
+-----------------------------------------------------------
+# evaluate는 테스트 데이터와 테스트 데이터의 출력 레이블(정답)을 넣어서 테스트 데이터에 대한 정확도를 계산
+# (참고) predict는 테스트 데이터만 넣어서 출력 결과(예측 값)을 뽑아내는 명령임.
+score = model.evaluate(X_test, y_test) 
+print('테스트 정확도:', score[1])
+-----------------------------------------------------------
+model.summary()
+# dense_1 : 선형회귀 레이어. (None, 10)은 출력층의 노드가 10개라는 의미.
+# dense_1의 Param 수가 7850인 것은 입력층 노드가 784개, 출력층 노드가 10개 이므로 784x10 = 7840개. 
+#여기에 각 출력층에 연결되는 Bias가 10개이므로, 총 개수는 7840개 + 10개 = 7850개로 표시되고 있음.
